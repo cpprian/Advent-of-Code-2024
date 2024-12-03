@@ -24,6 +24,7 @@
 // Your actual left and right lists contain many location IDs. What is the total distance between your lists?
 
 use std::{
+    collections::{HashMap, HashSet},
     fs::File,
     io::{self, BufRead},
     path::Path,
@@ -32,11 +33,14 @@ use std::{
 struct Solution {
     left: Vec<i32>,
     right: Vec<i32>,
+    similarity: HashMap<i32, i32>,
     total_distance: i32,
+    total_similarity: i32,
 }
 
 fn main() {
     let mut solution = Solution::new();
+    let mut helper = HashSet::new();
     if let Ok(lines) = read_lines("./src/input.txt") {
         for line in lines.flatten() {
             let numbers: Vec<i32> = line
@@ -46,17 +50,35 @@ fn main() {
 
             solution.left.push(numbers[0]);
             solution.right.push(numbers[1]);
+            helper.insert(numbers[0]);
+
+            *solution.similarity.entry(numbers[1]).or_insert(0) += 1;
         }
 
         solution.left.sort();
         solution.right.sort();
 
-        for (left, right) in solution.left.iter().zip(solution.right) {
-            solution.total_distance += (left - right).abs();
-        }
+        solution.total_distance = solution
+            .left
+            .iter()
+            .zip(solution.right)
+            .map(|(a, b)| (a - b).abs())
+            .sum();
+
+        solution.total_similarity = solution
+            .similarity
+            .iter()
+            .map(|(key, item)| match helper.get(key) {
+                Some(_) => key * item,
+                None => 0,
+            })
+            .sum();
     }
 
-    println!("Total distance: {}", solution.total_distance);
+    println!(
+        "Total distance: {}\nTotal sum of similarities: {}",
+        solution.total_distance, solution.total_similarity
+    );
 }
 
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
@@ -75,7 +97,9 @@ impl Solution {
         Solution {
             left: vec![],
             right: vec![],
+            similarity: HashMap::new(),
             total_distance: 0,
+            total_similarity: 0,
         }
     }
 }
