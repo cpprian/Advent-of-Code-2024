@@ -3,52 +3,65 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-type RedNosedReports = Vec<Vec<u32>>;
+fn try_made_safe_levels(report: &Vec<i32>) -> bool {
+    for idx in 0..report.len() {
+        let mut updated_report = report.clone();
+        updated_report.remove(idx);
 
-fn verify_report(reports: RedNosedReports) -> u32 {
-    if reports.len() == 0 {
-        return 0;
-    }
-    println!("Amount of reports to check: {}", reports.len());
-
-    // let mut stack: Vec<u32> = vec![];
-    for report in reports {
-        println!("{:?}", report);
-    }
-    0
-}
-
-fn read_input(filename: &str) -> Result<RedNosedReports, Box<dyn std::error::Error>> {
-    let file = File::open(filename).map_err(|e| format!("Failed to open file: {}", e))?;
-    let reader = BufReader::new(file);
-    let mut reports: RedNosedReports = vec![];
-
-    for line in reader.lines() {
-        match line {
-            Ok(content) => {
-                let parts = content.split(" ");
-                let collection: Result<Vec<u32>, _> = parts
-                    .collect::<Vec<&str>>()
-                    .iter()
-                    .map(|x| x.parse::<u32>())
-                    .collect();
-
-                let report = collection.map_err(|e| format!("Failed to convert &str to u32: {}", e))?;
-                reports.push(report);
-            }
-            Err(e) => eprintln!("Error reading line: {}", e),
+        if is_safe_levels(&updated_report) {
+            return true;
         }
     }
 
-    Ok(reports)
+    false
+}
+
+fn is_safe_levels(report: &Vec<i32>) -> bool {
+    if report.len() < 2 {
+        return true;
+    }
+
+    let mut increasing = true;
+    let mut decreasing = true;
+    for idx in 0..report.len() - 1 {
+        let diff = report[idx + 1] - report[idx];
+        if diff < -3 || diff == 0 || diff > 3 {
+            return false;
+        }
+
+        if diff > 0 {
+            decreasing = false;
+        }
+
+        if diff < 0 {
+            increasing = false;
+        }
+    }
+
+    increasing || decreasing
+}
+
+fn verify_raports(filename: &str) -> i32 {
+    let file = File::open(filename)
+        .map_err(|e| format!("Cannot open file: {}", e))
+        .unwrap();
+    let reader = BufReader::new(file);
+    let result = reader
+        .lines()
+        .map(|line| match line {
+            Ok(line) => line
+                .split_whitespace()
+                .filter_map(|n| n.parse::<i32>().ok())
+                .collect::<Vec<_>>(),
+            Err(_) => todo!(),
+        })
+        .filter(|report| is_safe_levels(report) || try_made_safe_levels(report))
+        .count();
+
+    result.try_into().unwrap()
 }
 
 fn main() {
-    match read_input("./input.txt") {
-        Ok(data) => {
-            let result = verify_report(data);
-            println!("Amout of safe reports: {}", result);
-        }
-        Err(e) => eprintln!("{}", e),
-    }
+    let result = verify_raports("./input.txt");
+    println!("result: {}", result);
 }
